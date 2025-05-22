@@ -1,1 +1,8 @@
-* * * * * root python /app/src/main.py >> /var/log/cron.log 2>&1
+55 11 * * * root python /app/src/ria/helpers/db_dump.py  >> /var/log/dump.log 2>&1
+0 12 * * * root python /app/src/main.py >> /var/log/main_parser.log 2>&1
+
+0 16 * * * root python /app/src/parser_helper.py  >> /var/log/parser_helper.log 2>&1
+0 20 * * * root python /app/src/parser_helper.py  >> /var/log/parser_helper.log 2>&1
+0 00 * * * root python /app/src/parser_helper.py  >> /var/log/parser_helper.log 2>&1
+0 04 * * * root python /app/src/parser_helper.py  >> /var/log/parser_helper.log 2>&1
+0 08 * * * root python /app/src/parser_helper.py  >> /var/log/parser_helper.log 2>&1

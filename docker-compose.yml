@@ -20,7 +20,7 @@ services:
       - .env
     build:
       context: .
-    command: ["cron", "-f"]
+    command:  sh -c "alembic upgrade head && cron && tail -f /var/log/cron.log"
     depends_on:
       db:
         condition: service_healthy
@@ -29,3 +29,6 @@ services:
 volumes:
   postgres_data:
     name: postgres_data
+
+  auto_parser_data:
+    name: auto_parser_data

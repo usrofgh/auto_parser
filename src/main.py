@@ -5,6 +5,7 @@ from httpx import AsyncClient
 
 from src.core.settings import Settings
 from src.parsers.ria.headers import HEADERS
+from src.parsers.ria.helpers.db_clean import db_clean
 from src.parsers.ria.ria_parser import RiaParser
 from src.third.webshare import WebShare
 
@@ -31,11 +32,12 @@ def initialize_parser() -> RiaParser:
     return ria_parser
 
 
-async def main():
+async def main_parser():
+    await db_clean()  # Clean old records. Old records are dumping in 'dumps' folder by cron
     parser = initialize_parser()
     print("RUN PARSER")
     await parser.run()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main_parser())
