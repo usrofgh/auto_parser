@@ -1,2 +1,1 @@
-* * * * * root python /app/src/test.py >> /var/log/test1.log 2>&1
-*/2 * * * * root python /app/src/test2.py >> /var/log/test2.log 2>&1
+* * * * * root python /app/src/test.py >> /var/log/cron.log 2>&1

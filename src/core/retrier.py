@@ -1,7 +1,5 @@
 from httpx import HTTPError
-from tenacity import retry, retry_if_exception_type, wait_exponential, stop_after_delay
-
-
+from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 
 def httpx_retry_on_failure():

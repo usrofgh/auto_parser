@@ -1,8 +1,8 @@
 from abc import ABC
-from typing import Generic, TypeVar, AsyncIterable
+from typing import AsyncIterable, Generic, TypeVar
 
 from pydantic import UUID4
-from sqlalchemy import delete, select, update, func
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from src.core.base_model import BaseModel

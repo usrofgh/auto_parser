@@ -10,8 +10,8 @@ from lxml.html import fromstring
 
 from src.core.retrier import httpx_retry_on_failure
 from src.parsers.ria.card_parser import CardParser
-from src.parsers.ria.model import ParseStatus, LinkType, RiaLinkObserverModel
-from src.parsers.ria.repository import RiaRepository, RiaLinkRepository
+from src.parsers.ria.model import LinkType, ParseStatus, RiaLinkObserverModel
+from src.parsers.ria.repository import RiaLinkRepository, RiaRepository
 from src.parsers.ria.schemas import LinkObserverSchema
 
 
@@ -30,7 +30,7 @@ class RiaParser:
         total_pages = 100
 
         # ---------- PARSE CARD LINKS ----------
-        # await asyncio.gather(*[self._parse_card_links(page_n, total_pages) for page_n in range(total_pages)])
+        await asyncio.gather(*[self._parse_card_links(page_n, total_pages) for page_n in range(total_pages)])
         total_cards = await self._ria_link_repository.count(status=ParseStatus.NEW, link_type=LinkType.CARD)
         # ---------- LOAD PARSED LINKS ----------
         print("PARSE CARDS AND SAVE BATCHES...")

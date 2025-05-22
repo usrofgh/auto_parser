@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from src.parsers.ria.model import ParseStatus, LinkType
+from src.parsers.ria.model import LinkType, ParseStatus
 
 
 class LinkObserverSchema(BaseModel):

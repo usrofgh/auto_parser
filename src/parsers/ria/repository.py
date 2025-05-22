@@ -1,7 +1,8 @@
+from sqlalchemy import update
+
 from src.core.base_repository import BaseRepository
 from src.core.db import session_maker
-from src.parsers.ria.model import RiaModel, RiaLinkObserverModel
-from sqlalchemy import update
+from src.parsers.ria.model import RiaLinkObserverModel, RiaModel
 
 
 class RiaRepository(BaseRepository[RiaModel]):
