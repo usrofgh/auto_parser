@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: db
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER", "--quiet" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auto_parser:
+    container_name: auto_parser
+    env_file:
+      - .env
+    build:
+      context: .
+    command: ["cron", "-f"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+volumes:
+  postgres_data:
+    name: postgres_data
