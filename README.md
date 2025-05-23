@@ -2,7 +2,7 @@
 
 Place the `.env` file in the project root
 ```bash
-git pull https://github.com/usrofgh/auto_parser.git
+git clone https://github.com/usrofgh/auto_parser.git
 cd auto_parser
 docker compose up
 ```
