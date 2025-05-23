@@ -25,14 +25,6 @@ class BaseRepository(ABC, Generic[ModelG]):
                 await db.commit()
 
 
-    async def create_without_conflict(self, obj_data: dict, index_elements: list) -> None:
-        stmt = insert(self.MODEL).values(**obj_data)
-        stmt = stmt.on_conflict_do_nothing(index_elements=index_elements)
-        async with session_maker() as db:
-            await db.execute(stmt)
-            await db.commit()
-
-
     async def create_bulk(self, object_datas: list[dict]) -> None:
         stmt = insert(self.MODEL)
         async with session_maker() as db:
@@ -77,6 +69,11 @@ class BaseRepository(ABC, Generic[ModelG]):
             await db.execute(stmt)
             await db.commit()
 
+    async def bulk_delete(self, **filters) -> None:
+        stmt = delete(self.MODEL).filter_by(**filters)
+        async with session_maker() as db:
+            await db.execute(stmt)
+            await db.commit()
 
     async def count(self, **filters) -> int:
         stmt = select(func.count("*")).select_from(self.MODEL).filter_by(**filters)
