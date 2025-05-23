@@ -9,3 +9,11 @@ class LinkObserverSchema(BaseModel):
     link_type: LinkType
     error_message: str | None = None
     count_retries: int | None = None
+
+
+class RiaErrorSchema(BaseModel):
+    url: str
+    status: ParseStatus
+    link_type: LinkType
+    error_message: str | None = None
+    count_retries: int | None = None
