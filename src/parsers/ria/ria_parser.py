@@ -31,13 +31,12 @@ class RiaParser:
 
         total_pages = await self._get_count_of_pages()
 
-        await asyncio.gather(*[self._parse_card_links(page_n, total_pages) for page_n in range(total_pages)])
-        total_cards = await self._link_repository.count(status=ParseStatus.NEW)
+        await asyncio.gather(*[self._parse_card_links(page_n) for page_n in range(total_pages)])
 
         logger.info("PARSE CARDS AND SAVE BATCHES...")
         async for batch in self._link_repository.stream(status=ParseStatus.NEW):
 
-            cards = await asyncio.gather(*[self._parse_card(link_model, total_cards) for link_model in batch])
+            cards = await asyncio.gather(*[self._parse_card(link_model) for link_model in batch])
             cards = [card for card in cards if card]  # Delete empty {} which appeared because of errors
 
             await self._card_repository.create_bulk_without_conflict(cards, index_elements=["url"])
@@ -76,11 +75,11 @@ class RiaParser:
     async def retry_failed_links(self) -> None:
         logger.info("RETRY FAILED LINKS...")
         async for batch in self._error_repository.stream(status=ParseStatus.ERROR, link_type=LinkType.PAGE_LINK):
-            await asyncio.gather(*[self._parse_retry_card_links(link_model.url, len(batch)) for link_model in batch])
+            await asyncio.gather(*[self._parse_retry_card_links(link_model.url) for link_model in batch])
         await self._error_repository.bulk_delete(is_under_delete=True)
 
         async for batch in self._error_repository.stream(status=ParseStatus.ERROR, link_type=LinkType.CARD):
-            cards = await asyncio.gather(*[self._parse_retry_card(link_model, len(batch)) for link_model in batch])
+            cards = await asyncio.gather(*[self._parse_retry_card(link_model) for link_model in batch])
             cards = [card for card in cards if card]
             await self._card_repository.create_bulk_without_conflict(cards, index_elements=["url"])
 
@@ -93,6 +92,7 @@ class RiaParser:
             await self._link_repository.create_bulk(els)
         await self._error_repository.bulk_delete(is_under_delete=True)
 
+        proceed_card_links = None
         async for batch in self._link_repository.stream(status=ParseStatus.NEW):
             cards = await asyncio.gather(*[self._parse_card(link_model, len(batch)) for link_model in batch])
             cards = [card for card in cards if card]
@@ -100,10 +100,11 @@ class RiaParser:
             proceed_card_links = [card["url"] for card in cards]
 
         await self._link_repository.bulk_delete(is_under_delete=True)
-        await self._link_repository.update_status_by_urls(proceed_card_links, ParseStatus.PROCEED)
+        if proceed_card_links:
+            await self._link_repository.update_status_by_urls(proceed_card_links, ParseStatus.PROCEED)
 
-    async def _parse_retry_card_links(self, url: str, total_pages: int):
-        await asyncio.sleep(uniform(0, total_pages / 50))
+    async def _parse_retry_card_links(self, url: str):
+        await asyncio.sleep(uniform(0, 120))
         req_el = await self._error_repository.get_all(url=url, status=ParseStatus.ERROR, link_type=LinkType.PAGE_LINK)
         req_el = req_el[0]
         async with self._semaphore:
@@ -137,9 +138,9 @@ class RiaParser:
         await self._error_repository.update(req_el.id, {"is_under_delete": True})
 
     @httpx_retry_on_failure()
-    async def _parse_card_links(self, page_number: int, total_pages: int) -> None:
+    async def _parse_card_links(self, page_number: int) -> None:
 
-        await asyncio.sleep(uniform(0, total_pages / 50))  # TODO:
+        await asyncio.sleep(uniform(0, 120))  # TODO:
         logger.info(f"PARSE CARDS LINKS ON PAGE {page_number}")
         url = self._base_url.format(page_number)
         async with self._semaphore:
@@ -172,8 +173,8 @@ class RiaParser:
 
 
     @httpx_retry_on_failure()
-    async def _parse_retry_card(self, link_model: RiaErrorModel, total_cards: int) -> dict:
-        await asyncio.sleep(uniform(0, total_cards / 50))  # TODO:
+    async def _parse_retry_card(self, link_model: RiaErrorModel) -> dict:
+        await asyncio.sleep(uniform(0, 120))  # TODO:
         logger.info(f"PARSE {link_model.url}")
         async with self._semaphore:
             try:
@@ -223,8 +224,8 @@ class RiaParser:
 
 
     @httpx_retry_on_failure()
-    async def _parse_card(self, link_model: RiaCardLinkModel, total_cards: int) -> dict:
-        await asyncio.sleep(uniform(0, total_cards / 50))  # TODO:
+    async def _parse_card(self, link_model: RiaCardLinkModel) -> dict:
+        await asyncio.sleep(uniform(0, 400))  # TODO:
         logger.info(f"PARSE {link_model.url}")
         async with self._semaphore:
             try:
