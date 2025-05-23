@@ -8,11 +8,12 @@ from httpx import AsyncClient
 from lxml.etree import LxmlError
 from lxml.html import fromstring
 
+from src.core.logger import logger
 from src.core.retrier import httpx_retry_on_failure
 from src.parsers.ria.card_parser import CardParser
 from src.parsers.ria.model import LinkType, ParseStatus, RiaCardLinkModel, RiaErrorModel
 from src.parsers.ria.repository import RiaCardLinkRepository, RiaCardRepository, RiaLinkErrorRepository
-from src.parsers.ria.schemas import LinkObserverSchema, RiaErrorSchema
+from src.parsers.ria.schemas import RiaErrorSchema
 
 
 class RiaParser:
@@ -34,7 +35,7 @@ class RiaParser:
         await asyncio.gather(*[self._parse_card_links(page_n, total_pages) for page_n in range(total_pages)])
         total_cards = await self._link_repository.count(status=ParseStatus.NEW)
 
-        print("PARSE CARDS AND SAVE BATCHES...")
+        logger.info("PARSE CARDS AND SAVE BATCHES...")
         async for batch in self._link_repository.stream(status=ParseStatus.NEW):
 
             cards = await asyncio.gather(*[self._parse_card(link_model, total_cards) for link_model in batch])
@@ -45,10 +46,36 @@ class RiaParser:
             proceed_card_links = [card["url"] for card in cards]
             await self._link_repository.update_status_by_urls(proceed_card_links, ParseStatus.PROCEED)
         await self._link_repository.bulk_delete(is_under_delete=True)
-        print()
+
+
+    def _build_url(self, page: int) -> str:
+        return self._base_url.format(page)
+
+
+    @httpx_retry_on_failure()
+    async def _get_count_of_pages(self) -> int:
+        url = self._build_url(page=0)
+        async with self._semaphore:
+            response = await choice(self._client_pool).get(url=url)
+
+        root = fromstring(response.content)
+        return self._card_parser.parse_count_of_pages(root)
+
+    @httpx_retry_on_failure()
+    async def _get_phone_number(self, card_id: str, data_hash: str) -> str | None:
+        params = {'hash': data_hash}
+        endpoint = f"https://auto.ria.com/users/phones/{card_id}"
+        response = await choice(self._client_pool).get(endpoint, params=params)
+        response.raise_for_status()
+        resp_data = response.json()
+        phone = resp_data.get("formattedPhoneNumber", None)
+        if not phone:
+            return None
+        phone = "38" + phone.replace(" ", "").replace("(", "").replace(")", "")
+        return phone
 
     async def retry_failed_links(self) -> None:
-        print("RETRY FAILED LINKS...")
+        logger.info("RETRY FAILED LINKS...")
         async for batch in self._error_repository.stream(status=ParseStatus.ERROR, link_type=LinkType.PAGE_LINK):
             await asyncio.gather(*[self._parse_retry_card_links(link_model.url, len(batch)) for link_model in batch])
         await self._error_repository.bulk_delete(is_under_delete=True)
@@ -76,32 +103,6 @@ class RiaParser:
         await self._link_repository.bulk_delete(is_under_delete=True)
         await self._link_repository.update_status_by_urls(proceed_card_links, ParseStatus.PROCEED)
 
-
-    def _build_url(self, page: int) -> str:
-        return self._base_url.format(page)
-
-    @httpx_retry_on_failure()
-    async def _get_count_of_pages(self) -> int:
-        url = self._build_url(page=0)
-        async with self._semaphore:
-            response = await choice(self._client_pool).get(url=url)
-
-        root = fromstring(response.content)
-        return self._card_parser.parse_count_of_pages(root)
-
-    @httpx_retry_on_failure()
-    async def _get_phone_number(self, card_id: str, data_hash: str) -> str | None:
-        params = {'hash': data_hash}
-        endpoint = f"https://auto.ria.com/users/phones/{card_id}"
-        response = await choice(self._client_pool).get(endpoint, params=params)
-        response.raise_for_status()
-        resp_data = response.json()
-        phone = resp_data.get("formattedPhoneNumber", None)
-        if not phone:
-            return None
-        phone = "38" + phone.replace(" ", "").replace("(", "").replace(")", "")
-        return phone
-
     async def _parse_retry_card_links(self, url: str, total_pages: int):
         await asyncio.sleep(uniform(0, total_pages / 50))
         req_el = await self._error_repository.get_all(url=url, status=ParseStatus.ERROR, link_type=LinkType.PAGE_LINK)
@@ -125,7 +126,7 @@ class RiaParser:
 
         root = fromstring(response.content)
         links = self._card_parser.parse_card_links(root)
-        print(f"INSERTING {len(links)} COMMON LINKS...")
+        logger.info(f"INSERTING {len(links)} COMMON LINKS...")
         model_obj = {"url": None, "status": ParseStatus.NEW}
         els = []
         for link in links:
@@ -140,7 +141,7 @@ class RiaParser:
     async def _parse_card_links(self, page_number: int, total_pages: int) -> None:
 
         await asyncio.sleep(uniform(0, total_pages / 50))  # TODO:
-        print(f"PARSE CARDS LINKS ON PAGE {page_number}")
+        logger.info(f"PARSE CARDS LINKS ON PAGE {page_number}")
         url = self._base_url.format(page_number)
         async with self._semaphore:
             try:
@@ -150,7 +151,7 @@ class RiaParser:
                 if not links:
                     raise httpx.HTTPError("NOT LOADED A PAGE WITH LINKS")
             except httpx.HTTPError:
-                print(f"[PAGE NUMBER {page_number}] ERROR")
+                logger.info(f"[PAGE NUMBER {page_number}] ERROR")
                 link_schema = RiaErrorSchema(
                     url=url,
                     status=ParseStatus.ERROR,
@@ -160,7 +161,7 @@ class RiaParser:
                 await self._error_repository.create(link_schema.model_dump(exclude_none=True))
                 return
 
-        print(f"INSERTING {len(links)} COMMON LINKS...")
+        logger.info(f"INSERTING {len(links)} COMMON LINKS...")
         model_obj = {"url": None, "status": ParseStatus.NEW}
         els = []
         for link in links:
@@ -174,12 +175,12 @@ class RiaParser:
     @httpx_retry_on_failure()
     async def _parse_retry_card(self, link_model: RiaErrorModel, total_cards: int) -> dict:
         await asyncio.sleep(uniform(0, total_cards / 50))  # TODO:
-        print(f"PARSE {link_model.url}")
+        logger.info(f"PARSE {link_model.url}")
         async with self._semaphore:
             try:
                 response = await choice(self._client_pool).get(url=link_model.url)
             except httpx.HTTPError:
-                print(f"[CARD {link_model.url}] ERROR")
+                logger.warning(f"[CARD {link_model.url}] ERROR")
                 error_schema = RiaErrorSchema(
                     url=link_model.url,
                     status=ParseStatus.ERROR,
@@ -206,7 +207,7 @@ class RiaParser:
                 await self._error_repository.update(link_model.id, {"is_under_delete": True})
                 return parsed_card
         except (httpx.HTTPError, LxmlError, IndexError):
-            print(f"[CARD {link_model.url}] ERROR")
+            logger.warning(f"[CARD {link_model.url}] ERROR")
             error_schema = RiaErrorSchema(
                 url=link_model.url,
                 status=ParseStatus.ERROR,
@@ -225,12 +226,12 @@ class RiaParser:
     @httpx_retry_on_failure()
     async def _parse_card(self, link_model: RiaCardLinkModel, total_cards: int) -> dict:
         await asyncio.sleep(uniform(0, total_cards / 50))  # TODO:
-        print(f"PARSE {link_model.url}")
+        logger.info(f"PARSE {link_model.url}")
         async with self._semaphore:
             try:
                 response = await choice(self._client_pool).get(url=link_model.url)
             except httpx.HTTPError:
-                print(f"[CARD {link_model.url}] ERROR")
+                logger.warning(f"[CARD {link_model.url}] ERROR")
                 error_schema = RiaErrorSchema(
                     url=link_model.url,
                     status=ParseStatus.ERROR,
@@ -251,7 +252,7 @@ class RiaParser:
                     phone_number = await self._get_phone_number(card_id, data_hash)
                 return self._card_parser.parse_card(root, link_model.url, phone_number)
         except (httpx.HTTPError, LxmlError, IndexError):
-            print(f"[CARD {link_model.url}] ERROR")
+            logger.warning(f"[CARD {link_model.url}] ERROR")
             error_schema = RiaErrorSchema(
                 url=link_model.url,
                 status=ParseStatus.ERROR,
