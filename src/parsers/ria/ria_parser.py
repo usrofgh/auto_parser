@@ -30,7 +30,6 @@ class RiaParser:
     async def run(self) -> None:
 
         total_pages = await self._get_count_of_pages()
-        total_pages = 1  # TODO:
 
         await asyncio.gather(*[self._parse_card_links(page_n, total_pages) for page_n in range(total_pages)])
         total_cards = await self._link_repository.count(status=ParseStatus.NEW)
@@ -121,7 +120,7 @@ class RiaParser:
 
                 if error_schema.count_retries > 3:
                     error_schema.status = ParseStatus.DEAD
-                await self._error_repository.update(req_el.id, link_schema.model_dump(exclude_none=True))
+                await self._error_repository.update(req_el.id, error_schema.model_dump(exclude_none=True))
                 return
 
         root = fromstring(response.content)
