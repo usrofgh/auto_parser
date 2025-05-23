@@ -9,8 +9,9 @@ from alembic import context
 
 from src.core.base_model import BaseModel
 from src.core.settings import Settings
-from src.parsers.ria.model import RiaModel
-from src.parsers.ria.model import RiaLinkObserverModel
+from src.parsers.ria.model import RiaCardModel
+from src.parsers.ria.model import RiaCardLinkModel
+from src.parsers.ria.model import RiaErrorModel
 
 config = context.config
 

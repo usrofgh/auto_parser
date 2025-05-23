@@ -1,33 +1,46 @@
 # How to run
 
----
-
-* Put `.env` in the root of the project and type:
+Place the `.env` file in the project root
 ```bash
+git clone https://github.com/usrofgh/auto_parser.git
+cd auto_parser
 docker compose up
 ```
-
 ---
+
 # Parser's flow
 
 ### Main parser:
-1. Request a proxy list from webshare(100 proxies)
-2. Initialize async clients pool - 100 clients
-3. Run the parser
-4. Parse count of pages with card's links
-5. Parse all existing card's links and save them into a table
-6. Loading card's links, visiting them and scraping card's information. Result will be saved into the table
+
+1. Request 100 proxies from Webshare 
+2. Initialize an asynchronous client pool of 100 clients 
+3. Start parsing 
+4. Determine how many pages contain card links 
+5. Extract all card links and save them to the links table 
+6. Load each link, visit the page, scrape the card data, and save it to the data table
 
 ### Helper parser:
-1. Load records with status 'ERROR' and type 'COMMON' and try to visit and collect card's links again
-   * If success - save parsed links and change the status from 'ERROR' to 'PROCEED' 
-   * If error - increment error counter. If it's 3+ errors - change status to 'DEAD'
-2. Load records with status 'ERROR' and type 'CARD'
-    * If success - save the card and change status of link to 'PROCEED'
-    * If error - increment error counter. If it's 3+ errors - change status to 'DEAD'
-3. Load records with status 'NEW' and type 'CARD' and try to parse them. It's new records after processing 'ERROR' status
 
+1. Retry failed “PAGE_LINK” records:
+   * Load entries with status ERROR and type PAGE_LINK 
+   * For each, try to fetch and extract card links 
+     * On success, delete an item from this errors table
+     * On failure, increment error count; if ≥ 3, mark as DEAD (the problem must be verified on yourself)
+
+
+2. Retry failed “CARD” records:
+   * Load entries with status ERROR and type CARD
+   * For each, try to fetch and scrape the card data
+     * On success, save data and set status to PROCEED 
+     * On failure, increment error count; if ≥ 3, mark as DEAD
+
+
+3. Process new “CARD” records:
+   * Load entries with status NEW and type CARD (they appeared after retrying 'PAGE_LINK' parsing) 
+   * For each, attempt to parse as above
+
+---
 
 ### Cron
-* Run main & helper parsers
-* Run DB dumper and clean DB
+* Run main and helper parsers 
+* Dump the database and perform cleanup

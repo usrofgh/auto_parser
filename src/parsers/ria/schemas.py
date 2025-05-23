@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from src.parsers.ria.model import LinkType, ParseStatus
 
 
-class LinkObserverSchema(BaseModel):
+class RiaErrorSchema(BaseModel):
     url: str
     status: ParseStatus
     link_type: LinkType

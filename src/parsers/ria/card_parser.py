@@ -4,7 +4,7 @@ import math
 class CardParser:
     def parse_card(self, root, card_url: str, phone_number: str | None) -> dict:
 
-        obj = {
+        card_info = {
             "url": card_url,
             "title": self._parse_title(root),
             "price_usd": self._parse_price_usd(root),
@@ -16,7 +16,7 @@ class CardParser:
             "car_number": self._parse_car_number(root),
             "car_vin": self._parse_car_vin(root)
         }
-        return obj
+        return card_info
 
     @staticmethod
     def _parse_title(root) -> str:

@@ -2,15 +2,19 @@ from sqlalchemy import update
 
 from src.core.base_repository import BaseRepository
 from src.core.db import session_maker
-from src.parsers.ria.model import RiaLinkObserverModel, RiaModel
+from src.parsers.ria.model import RiaCardLinkModel, RiaCardModel, RiaErrorModel
 
 
-class RiaRepository(BaseRepository[RiaModel]):
-    MODEL = RiaModel
+class RiaCardRepository(BaseRepository[RiaCardModel]):
+    MODEL = RiaCardModel
 
 
-class RiaLinkRepository(BaseRepository[RiaLinkObserverModel]):
-    MODEL = RiaLinkObserverModel
+class RiaLinkErrorRepository(BaseRepository[RiaErrorModel]):
+    MODEL = RiaErrorModel
+
+
+class RiaCardLinkRepository(BaseRepository[RiaCardLinkModel]):
+    MODEL = RiaCardLinkModel
 
     async def update_status_by_urls(self, urls: list[str], new_status: str) -> None:
         stmt = (

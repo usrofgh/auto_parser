@@ -1,5 +1,6 @@
 from httpx import Client
 
+from src.core.logger import logger
 from src.core.retrier import httpx_retry_on_failure
 
 
@@ -16,7 +17,7 @@ class WebShare:
         return resp_data["results"]
 
     def get_proxies(self, page_size: int) -> list[str]:
-        print("GET PROXIES FROM WEBSHARE...")
+        logger.info("GET PROXIES FROM WEBSHARE...")
         proxies_info = self.get_proxy_list(page_size)
         proxies = []
         for proxy_info in proxies_info:
@@ -25,5 +26,5 @@ class WebShare:
             port = proxy_info["port"]
             proxy_url = f"http://{username}:{password}@p.webshare.io:{port}"
             proxies.append(proxy_url)
-        print(f"GOTTEN {len(proxies)} PROXIES")
+        logger.info(f"GOTTEN {len(proxies)} PROXIES")
         return proxies
