@@ -21,8 +21,8 @@ docker compose up
 
 ### Helper parser:
 
-1. Retry failed “COMMON” records:
-   * Load entries with status ERROR and type COMMON 
+1. Retry failed “PAGE_LINK” records:
+   * Load entries with status ERROR and type PAGE_LINK 
    * For each, try to fetch and extract card links 
      * On success, delete an item from this errors table
      * On failure, increment error count; if ≥ 3, mark as DEAD (the problem must be verified on yourself)
@@ -36,7 +36,7 @@ docker compose up
 
 
 3. Process new “CARD” records:
-   * Load entries with status NEW and type CARD (they appeared after retrying 'COMMON' parsing) 
+   * Load entries with status NEW and type CARD (they appeared after retrying 'PAGE_LINK' parsing) 
    * For each, attempt to parse as above
 
 ---
