@@ -1,8 +1,8 @@
-55 11 * * * root cd /app && /usr/local/bin/python -m src.parsers.ria.helpers.db_dump >> /var/log/db_dump.log 2>&1
-0 12 * * * root cd /app && /usr/local/bin/python -m src.main >> /var/log/main_parser.log 2>&1
+55 11 * * * root cd /app && /usr/local/bin/python -m src.parsers.ria.helpers.db_dump >> /var/log/cron.log 2>&1
+0 12 * * * root cd /app && /usr/local/bin/python -m src.main >> /var/log/cron.log 2>&1
 
-0 16 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/parser_helper.log 2>&1
-0 20 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/parser_helper.log 2>&1
-0 00 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/parser_helper.log 2>&1
-0 04 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/parser_helper.log 2>&1
-0 08 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/parser_helper.log 2>&1
+0 16 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/cron.log 2>&1
+0 20 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/cron.log 2>&1
+0 00 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/cron.log 2>&1
+0 04 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/cron.log 2>&1
+0 08 * * * root cd /app && /usr/local/bin/python -m src.parser_helper  >> /var/log/cron.log 2>&1
